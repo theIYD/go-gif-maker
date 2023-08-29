@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"os"
+
+	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
 func errorHandler(err error, message string) {
@@ -46,6 +48,22 @@ func getInputs() *Input {
 	}
 }
 
+func cropVideo(videoPath string, startTime string, endTime string) string {
+	// Get directory to create the cropped video
+	croppedDir, err := os.Getwd()
+	errorHandler(err, "Could not read current directory")
+
+	inputVideoPath := fmt.Sprintf("%s/input.mp4", videoPath)
+	croppedVideoOutputPath := fmt.Sprintf("%s/cropped.mp4", croppedDir)
+
+	// ffmpeg -ss 00:01:00 -to 00:02:00 -i input.mp4 -c copy output.mp4
+	stream := ffmpeg.Input(inputVideoPath, ffmpeg.KwArgs{"ss": startTime, "to": endTime})
+	err = stream.Output(croppedVideoOutputPath, ffmpeg.KwArgs{"c": "copy"}).OverWriteOutput().ErrorToStdOut().Run()
+	errorHandler(err, "Could not crop the video")
+
+	return croppedVideoOutputPath
+}
+
 func main() {
 	// Get inputs from the command line
 	inputData := getInputs()
@@ -56,6 +74,9 @@ func main() {
 		err = os.Mkdir(outputDir, 0755)
 		errorHandler(err, fmt.Sprintf("Could not create output directory at %s", outputDir))
 	}
+
+	croppedOutput := cropVideo(inputData.videoPath, inputData.startTime, inputData.endTime)
+	fmt.Println("Cropped video output", croppedOutput)
 
 	// // read path directory
 	// err = os.Chdir(*path)
