@@ -1,4 +1,5 @@
 bin/
-images/
+frames/
 output/
 *.mp4
+.DS_Store

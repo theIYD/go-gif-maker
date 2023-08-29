@@ -15,13 +15,6 @@ func errorHandler(err error, message string) {
 	}
 }
 
-/*
-	- take in a dirpath (video)/dirpath (images)/video url for creating a gif
-	- in case of video, take in start, end time for crop
-	- use ffmpeg to get each image sequence and store
-	- use below logic to read the images and generate a gif
-*/
-
 type Input struct {
 	startTime  string
 	endTime    string
@@ -58,10 +51,47 @@ func cropVideo(videoPath string, startTime string, endTime string) string {
 
 	// ffmpeg -ss 00:01:00 -to 00:02:00 -i input.mp4 -c copy output.mp4
 	stream := ffmpeg.Input(inputVideoPath, ffmpeg.KwArgs{"ss": startTime, "to": endTime})
-	err = stream.Output(croppedVideoOutputPath, ffmpeg.KwArgs{"c": "copy"}).OverWriteOutput().ErrorToStdOut().Run()
+	err = stream.Output(croppedVideoOutputPath, ffmpeg.KwArgs{"c": "copy"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
 	errorHandler(err, "Could not crop the video")
 
 	return croppedVideoOutputPath
+}
+
+func videoToFrames(videoPath string) string {
+	currentDir, err := os.Getwd()
+	errorHandler(err, "Could not read current directory")
+
+	framesDir := fmt.Sprintf("%s/frames", currentDir)
+	if _, err := os.Stat(framesDir); os.IsNotExist(err) {
+		err = os.Mkdir(framesDir, 0755)
+		errorHandler(err, fmt.Sprintf("Could not create frames directory at %s", framesDir))
+	}
+
+	framesOutputImgPath := fmt.Sprintf("%s/img%%03d.png", framesDir)
+	stream := ffmpeg.Input(videoPath)
+	err = stream.Output(framesOutputImgPath, ffmpeg.KwArgs{"vf": "fps=15"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
+	errorHandler(err, "Could not convert cropped video to frames")
+
+	return framesDir
+}
+
+func framesToGIF(framesPath string, outputPath string) string {
+	framesImgPath := fmt.Sprintf("%s/img%%03d.png", framesPath)
+	outputFilePath := fmt.Sprintf("%s/output.gif", outputPath)
+
+	stream := ffmpeg.Input(framesImgPath, ffmpeg.KwArgs{"f": "image2", "framerate": "15", "loop": "0"})
+	err := stream.Output(outputFilePath).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
+	errorHandler(err, "Could not create GIF using frames")
+
+	return outputFilePath
+}
+
+func cleanUp(dir string, filePath string) {
+	err := os.RemoveAll(dir)
+	errorHandler(err, fmt.Sprintf("Could not delete %s", dir))
+
+	err = os.Remove(filePath)
+	errorHandler(err, fmt.Sprintf("Could not delete %s", filePath))
 }
 
 func main() {
@@ -76,20 +106,11 @@ func main() {
 	}
 
 	croppedOutput := cropVideo(inputData.videoPath, inputData.startTime, inputData.endTime)
-	fmt.Println("Cropped video output", croppedOutput)
+	framesOutput := videoToFrames(croppedOutput)
+	gifPath := framesToGIF(framesOutput, outputDir)
 
-	// // read path directory
-	// err = os.Chdir(*path)
-	// errorHandler(err)
+	// Cleanup
+	cleanUp(framesOutput, croppedOutput)
 
-	// dir, err := os.ReadDir(".")
-	// errorHandler(err)
-
-	// // get the file name
-	// filePattern := strings.Split(dir[0].Name(), "-")
-	// inputFileName := fmt.Sprintf("%s-%%d.png", filePattern[0])
-	// outputFilePath := fmt.Sprintf("../output/%s-final.gif", filePattern[0])
-
-	// err = ffmpeg.Input(inputFileName, ffmpeg.KwArgs{"f": "image2", "framerate": "10", "loop": "0"}).Output(outputFilePath).OverWriteOutput().ErrorToStdOut().Run()
-	// errorHandler(err)
+	fmt.Println("Your GIF: ", gifPath)
 }
