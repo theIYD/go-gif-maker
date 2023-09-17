@@ -23,6 +23,9 @@ $ brew install gif-maker
 ### Usage
 ```bash
 $ gif-maker -start=00:00:23 -end=00:00:30 -path=input.mp4
+
+// use a youtube video
+$ gif-maker -start=00:00:23 -end=00:00:30 -path=https://www.youtube.com/watch?v=dQw4w9WgXcQ
 ```
 
 ### Development
