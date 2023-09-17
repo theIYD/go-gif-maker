@@ -12,12 +12,6 @@ import (
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
-func errorHandler(err error, message string) {
-	if err != nil && len(message) > 0 {
-		log.Fatalf("Err: %s\n Trace: %s", message, err.Error())
-	}
-}
-
 type Input struct {
 	startTime   string
 	endTime     string
@@ -28,14 +22,22 @@ type Input struct {
 
 func getInputs() *Input {
 	defaultPath, err := os.Getwd()
-	errorHandler(err, "Could not get current directory")
+	errorHandler(err, "Could not get the current directory")
 
-	startTime := flag.String("start", "0", "Start time")
-	endTime := flag.String("end", "0", "End time")
-	videoPath := flag.String("path", defaultPath, "URL / The path to a video file on your local machine.")
-	outputPath := flag.String("out", defaultPath, "Define the path for the GIF.")
+	startTime := flag.String("start", "00:00:00", "Start time")
+	endTime := flag.String("end", "", "End time")
+	videoPath := flag.String("path", "", "URL / The path to a video file on your local machine.")
+	outputPath := flag.String("out", defaultPath, "The path for the generated GIF.")
 
 	flag.Parse()
+
+	if len(*videoPath) < 1 {
+		log.Fatal("Err: The path to video file is required")
+	}
+
+	if *endTime == "" {
+		log.Fatal("Err: End time is required")
+	}
 
 	return &Input{
 		startTime:   *startTime,
@@ -133,7 +135,7 @@ func fetchVideo(url string, pathToSave string) string {
 func main() {
 	// Get inputs from the command line
 	inputData := getInputs()
-	videoPath := fmt.Sprintf("%s/input.mp4", inputData.videoPath)
+	videoPath := inputData.videoPath
 
 	s := spinner.NewSpinner("Fetching video from URL...")
 
@@ -145,13 +147,6 @@ func main() {
 		fmt.Println("✓ Video fetched")
 	}
 
-	// Handle the output directory
-	outputDir := fmt.Sprintf("%s/output", inputData.outputPath)
-	if _, err := os.Stat(outputDir); os.IsNotExist(err) {
-		err = os.Mkdir(outputDir, 0755)
-		errorHandler(err, fmt.Sprintf("Could not create output directory at %s", outputDir))
-	}
-
 	s = spinner.NewSpinner("Cooking up the GIF...")
 	s.SetCharset([]string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"})
 
@@ -159,7 +154,7 @@ func main() {
 	// FFMPEG work
 	croppedOutput := cropVideo(videoPath, inputData.startTime, inputData.endTime)
 	framesOutput := videoToFrames(croppedOutput)
-	gifPath := framesToGIF(framesOutput, outputDir)
+	gifPath := framesToGIF(framesOutput, inputData.outputPath)
 
 	// Cleanup
 	cleanUp(framesOutput, croppedOutput)

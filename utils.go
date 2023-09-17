@@ -2,9 +2,16 @@ package main
 
 import (
 	"errors"
+	"log"
 	"net/url"
 	"strings"
 )
+
+func errorHandler(err error, message string) {
+	if err != nil && len(message) > 0 {
+		log.Fatalf("Err: %s\n Trace: %s", message, err.Error())
+	}
+}
 
 func isUrl(str string) bool {
 	u, err := url.Parse(str)
