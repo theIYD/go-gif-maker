@@ -1,5 +1,5 @@
 build:
-	@go build -o bin/gif-maker main.go
+	@go build -o bin/gif-maker
 
 compile: 
 	@echo "Compiling for linux, mac, windows"

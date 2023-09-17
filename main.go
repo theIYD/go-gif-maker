@@ -3,7 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
+	"io"
 	"log"
+	"net/http"
 	"os"
 
 	ffmpeg "github.com/u2takey/ffmpeg-go"
@@ -16,10 +18,11 @@ func errorHandler(err error, message string) {
 }
 
 type Input struct {
-	startTime  string
-	endTime    string
-	videoPath  string
-	outputPath string
+	startTime   string
+	endTime     string
+	videoPath   string
+	outputPath  string
+	defaultPath string
 }
 
 func getInputs() *Input {
@@ -28,16 +31,17 @@ func getInputs() *Input {
 
 	startTime := flag.String("start", "0", "Start time")
 	endTime := flag.String("end", "0", "End time")
-	videoPath := flag.String("path", defaultPath, "Video path")
-	outputPath := flag.String("out", defaultPath, "Output path")
+	videoPath := flag.String("path", defaultPath, "URL / The path to a video file on your local machine.")
+	outputPath := flag.String("out", defaultPath, "Define the path for the GIF.")
 
 	flag.Parse()
 
 	return &Input{
-		startTime:  *startTime,
-		endTime:    *endTime,
-		videoPath:  *videoPath,
-		outputPath: *outputPath,
+		startTime:   *startTime,
+		endTime:     *endTime,
+		videoPath:   *videoPath,
+		outputPath:  *outputPath,
+		defaultPath: defaultPath,
 	}
 }
 
@@ -45,12 +49,10 @@ func cropVideo(videoPath string, startTime string, endTime string) string {
 	// Get directory to create the cropped video
 	croppedDir, err := os.Getwd()
 	errorHandler(err, "Could not read current directory")
-
-	inputVideoPath := fmt.Sprintf("%s/input.mp4", videoPath)
 	croppedVideoOutputPath := fmt.Sprintf("%s/cropped.mp4", croppedDir)
 
 	// ffmpeg -ss 00:01:00 -to 00:02:00 -i input.mp4 -c copy output.mp4
-	stream := ffmpeg.Input(inputVideoPath, ffmpeg.KwArgs{"ss": startTime, "to": endTime})
+	stream := ffmpeg.Input(videoPath, ffmpeg.KwArgs{"ss": startTime, "to": endTime})
 	err = stream.Output(croppedVideoOutputPath, ffmpeg.KwArgs{"c": "copy"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
 	errorHandler(err, "Could not crop the video")
 
@@ -94,9 +96,48 @@ func cleanUp(dir string, filePath string) {
 	errorHandler(err, fmt.Sprintf("Could not delete %s", filePath))
 }
 
+func fetchVideo(url string, pathToSave string) string {
+	videoExtension, err := getFileExtensionFromUrl(url)
+	errString := "Error fetching resource"
+
+	if err != nil {
+		errorHandler(err, errString)
+		return ""
+	}
+
+	resp, err := http.Get(url)
+	if err != nil {
+		errorHandler(err, errString)
+		return ""
+	}
+	defer resp.Body.Close()
+
+	path := fmt.Sprintf("%s/input.%s", pathToSave, videoExtension)
+
+	out, err := os.Create(fmt.Sprintf("%s/input.%s", pathToSave, videoExtension))
+	if err != nil {
+		errorHandler(err, errString)
+		return ""
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, resp.Body)
+	if err != nil {
+		errorHandler(err, errString)
+	}
+
+	return path
+}
+
 func main() {
 	// Get inputs from the command line
 	inputData := getInputs()
+	videoPath := fmt.Sprintf("%s/input.mp4", inputData.videoPath)
+
+	// Check if video path is a URL
+	if isUrl(inputData.videoPath) {
+		videoPath = fetchVideo(inputData.videoPath, inputData.defaultPath)
+	}
 
 	// Handle the output directory
 	outputDir := fmt.Sprintf("%s/output", inputData.outputPath)
@@ -105,7 +146,7 @@ func main() {
 		errorHandler(err, fmt.Sprintf("Could not create output directory at %s", outputDir))
 	}
 
-	croppedOutput := cropVideo(inputData.videoPath, inputData.startTime, inputData.endTime)
+	croppedOutput := cropVideo(videoPath, inputData.startTime, inputData.endTime)
 	framesOutput := videoToFrames(croppedOutput)
 	gifPath := framesToGIF(framesOutput, outputDir)
 
