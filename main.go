@@ -156,6 +156,7 @@ func main() {
 	s.SetCharset([]string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"})
 
 	s.Start()
+	// FFMPEG work
 	croppedOutput := cropVideo(videoPath, inputData.startTime, inputData.endTime)
 	framesOutput := videoToFrames(croppedOutput)
 	gifPath := framesToGIF(framesOutput, outputDir)
