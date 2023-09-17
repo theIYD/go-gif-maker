@@ -53,7 +53,7 @@ func cropVideo(videoPath string, startTime string, endTime string) string {
 
 	// ffmpeg -ss 00:01:00 -to 00:02:00 -i input.mp4 -c copy output.mp4
 	stream := ffmpeg.Input(videoPath, ffmpeg.KwArgs{"ss": startTime, "to": endTime})
-	err = stream.Output(croppedVideoOutputPath, ffmpeg.KwArgs{"c": "copy"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
+	err = stream.Output(croppedVideoOutputPath, ffmpeg.KwArgs{"c": "copy", "v": "quiet"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
 	errorHandler(err, "Could not crop the video")
 
 	return croppedVideoOutputPath
@@ -71,7 +71,7 @@ func videoToFrames(videoPath string) string {
 
 	framesOutputImgPath := fmt.Sprintf("%s/img%%03d.png", framesDir)
 	stream := ffmpeg.Input(videoPath)
-	err = stream.Output(framesOutputImgPath, ffmpeg.KwArgs{"vf": "fps=15"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
+	err = stream.Output(framesOutputImgPath, ffmpeg.KwArgs{"vf": "fps=15", "v": "quiet"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
 	errorHandler(err, "Could not convert cropped video to frames")
 
 	return framesDir
@@ -82,7 +82,7 @@ func framesToGIF(framesPath string, outputPath string) string {
 	outputFilePath := fmt.Sprintf("%s/output.gif", outputPath)
 
 	stream := ffmpeg.Input(framesImgPath, ffmpeg.KwArgs{"f": "image2", "framerate": "15", "loop": "0"})
-	err := stream.Output(outputFilePath).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
+	err := stream.Output(outputFilePath, ffmpeg.KwArgs{"v": "quiet"}).OverWriteOutput().ErrorToStdOut().Silent(true).Run()
 	errorHandler(err, "Could not create GIF using frames")
 
 	return outputFilePath
