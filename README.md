@@ -14,6 +14,17 @@ The CLI creates a GIF from a video using `ffmpeg`. The video can be a remote URL
 - `-out:` - Output path for the generation of the GIF.
 - `-h:` - See usage of the options.
 
+### Installation
+```bash
+$ brew tap theIYD/tools
+$ brew install gif-maker
+```
+
+### Usage
+```bash
+$ gif-maker -start=00:00:23 -end=00:00:30 -path=input.mp4
+```
+
 ### Development
 
 - Clone the repository
