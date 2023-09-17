@@ -3,9 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
-	"io"
 	"log"
-	"net/http"
 	"os"
 
 	"github.com/janeczku/go-spinner"
@@ -99,39 +97,6 @@ func cleanUp(dir string, filePath string) {
 	errorHandler(err, fmt.Sprintf("Could not delete %s", filePath))
 }
 
-func fetchVideo(url string, pathToSave string) string {
-	videoExtension, err := getFileExtensionFromUrl(url)
-	errString := "Error fetching resource"
-
-	if err != nil {
-		errorHandler(err, errString)
-		return ""
-	}
-
-	resp, err := http.Get(url)
-	if err != nil {
-		errorHandler(err, errString)
-		return ""
-	}
-	defer resp.Body.Close()
-
-	path := fmt.Sprintf("%s/input.%s", pathToSave, videoExtension)
-
-	out, err := os.Create(fmt.Sprintf("%s/input.%s", pathToSave, videoExtension))
-	if err != nil {
-		errorHandler(err, errString)
-		return ""
-	}
-	defer out.Close()
-
-	_, err = io.Copy(out, resp.Body)
-	if err != nil {
-		errorHandler(err, errString)
-	}
-
-	return path
-}
-
 func main() {
 	// Get inputs from the command line
 	inputData := getInputs()
@@ -139,10 +104,20 @@ func main() {
 
 	s := spinner.NewSpinner("Fetching video from URL...")
 
-	// Check if video path is a URL
 	if isUrl(inputData.videoPath) {
+		// Check for youtube
+		videoId, err := isYoutubeUrl(inputData.videoPath)
+		if err != nil {
+			errorHandler(err, "Error fetching resource")
+		}
+
 		s.Start()
-		videoPath = fetchVideo(inputData.videoPath, inputData.defaultPath)
+		if len(videoId) > 1 {
+			videoPath = fetchYoutubeVideo(videoId, inputData.defaultPath)
+		} else {
+			videoPath = fetchVideo(inputData.videoPath, inputData.defaultPath)
+		}
+
 		s.Stop()
 		fmt.Println("✓ Video fetched")
 	}
