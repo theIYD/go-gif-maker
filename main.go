@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/janeczku/go-spinner"
 	ffmpeg "github.com/u2takey/ffmpeg-go"
 )
 
@@ -134,9 +135,14 @@ func main() {
 	inputData := getInputs()
 	videoPath := fmt.Sprintf("%s/input.mp4", inputData.videoPath)
 
+	s := spinner.NewSpinner("Fetching video from URL...")
+
 	// Check if video path is a URL
 	if isUrl(inputData.videoPath) {
+		s.Start()
 		videoPath = fetchVideo(inputData.videoPath, inputData.defaultPath)
+		s.Stop()
+		fmt.Println("✓ Video fetched")
 	}
 
 	// Handle the output directory
@@ -146,6 +152,10 @@ func main() {
 		errorHandler(err, fmt.Sprintf("Could not create output directory at %s", outputDir))
 	}
 
+	s = spinner.NewSpinner("Cooking up the GIF...")
+	s.SetCharset([]string{"⣾", "⣽", "⣻", "⢿", "⡿", "⣟", "⣯", "⣷"})
+
+	s.Start()
 	croppedOutput := cropVideo(videoPath, inputData.startTime, inputData.endTime)
 	framesOutput := videoToFrames(croppedOutput)
 	gifPath := framesToGIF(framesOutput, outputDir)
@@ -153,5 +163,6 @@ func main() {
 	// Cleanup
 	cleanUp(framesOutput, croppedOutput)
 
-	fmt.Println("Your GIF: ", gifPath)
+	s.Stop()
+	fmt.Println("✓ Your GIF: ", gifPath)
 }
