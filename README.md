@@ -2,6 +2,8 @@
 
 Using a simple command, create a GIF from a video in no time. :rocket:
 
+<img src="docs/sample.gif" />
+
 ### How does it work ?
 
 The CLI creates a GIF from a video using `ffmpeg`. The video can be a remote URL resource OR an absolute path to a video file on your local machine.
