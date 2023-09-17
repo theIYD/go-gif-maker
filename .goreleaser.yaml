@@ -12,6 +12,17 @@ builds:
       - linux
       - darwin
 
+brews:
+  -
+    name: gif-maker
+    homepage: "https://github.com/theIYD/go-gif-maker"
+    tap:
+      owner: theIYD
+      name: homebrew-tools
+    commit_author:
+      name: theIYD
+      email: dargahidrees@gmail.com
+
 archives:
   - format: tar.gz
     # this name template makes the OS and Arch compatible with the results of uname.
